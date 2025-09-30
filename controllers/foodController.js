@@ -17,22 +17,7 @@ const getfoodByhotel = async(req,res) =>{
         res.status(500).json({message: err.message})
     }
 };
-const getFoodById = async (req, res) => {
-    try {
-        const food = await Food.findById(req.params.id).populate("hotel", "name");
-        if (!food) return res.status(404).json({ message: "Food not found" });
 
-        res.json({
-            _id: food._id,
-            name: food.name,
-            price: food.price,
-            image: food.image,
-            hotelName: food.hotel?.name || "Unknown",
-        });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-};
 const updateFood = async(req,res) => {
     try{
         const updatedfood = await Food.findByIdAndUpdate(req.params.id ,req.body ,{new:true});
@@ -52,5 +37,5 @@ const deleteFood = async(req,res) =>{
     }
 }
 
-module.exports ={createFood ,getfoodByhotel,getFoodById ,updateFood ,deleteFood};
+module.exports ={createFood ,getfoodByhotel ,updateFood ,deleteFood};
 
