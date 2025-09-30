@@ -17,6 +17,18 @@ const getfoodByhotel = async(req,res) =>{
         res.status(500).json({message: err.message})
     }
 };
+const getFoodById = async (req, res) => {
+  try {
+    const food = await Food.findById(req.params.id).populate("hotel", "name");
+    if (!food) return res.status(404).json({ message: "Food not found" });
+    res.json({
+      ...food._doc,
+      hotelName: food.hotel?.name || "Unknown",
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 const updateFood = async(req,res) => {
     try{
@@ -37,5 +49,5 @@ const deleteFood = async(req,res) =>{
     }
 }
 
-module.exports ={createFood ,getfoodByhotel ,updateFood ,deleteFood};
+module.exports ={createFood ,getfoodByhotel,getFoodById ,updateFood ,deleteFood};
 
