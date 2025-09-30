@@ -21,10 +21,7 @@ const getFoodById = async (req, res) => {
   try {
     const food = await Food.findById(req.params.id).populate("hotel", "name");
     if (!food) return res.status(404).json({ message: "Food not found" });
-    res.json({
-      ...food._doc,
-      hotelName: food.hotel?.name || "Unknown",
-    });
+    res.json(food);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
