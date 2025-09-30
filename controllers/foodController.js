@@ -19,7 +19,7 @@ const getfoodByhotel = async (req, res) => {
 };
 const getFoodById = async (req, res) => {
     try {
-        const food = await Food.findById(req.params.id).populate("hotel", "name");
+        const food = await Food.findById(req.params.id);
         if (!food) return res.status(404).json({ message: "Food not found" });
         res.json({
             _id: food._id,
