@@ -6,8 +6,9 @@ const router =express.Router();
 
 router.post("/" ,protect,  placeOrder);
 router.get("/" ,protect,getUserOrders);
+router.get("/admin" ,protect,admins,getUserOrders);
 router.put("/:orderId/cancel",protect,cancelOrder);
-router.put("/:id",protect ,updateOrder);
+router.put("/:id",protect ,admins,updateOrder);
 router.delete("/:id",protect ,deleteOrder);
 
 

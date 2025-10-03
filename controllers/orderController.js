@@ -27,17 +27,35 @@ const getUserOrders = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-// update order
-const updateOrder = async(req,res)=>{
-  try{
-    const updatedorder = await Order.findByIdAndUpdate(req.params.id ,req.body,{new:true});
-    res.status(200).json({message:"updated successfully",updatedorder})
-
-  }catch(err){
-    res.status(500).json({message:"server error:Network connection failed "})
+// Get all orders 
+const getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate({ path: "user", select: "username email" })
+      .populate({ path: "items.food", model: "Food" });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-}
+};
+
+// Update order s
+const updateOrder = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    order.status = status;
+    await order.save();
+
+    res.json({ message: "Order status updated", order });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
 
 const deleteOrder = async (req, res) => {
   try {
@@ -63,4 +81,4 @@ const cancelOrder = async (req, res) => {
   }
 };
 
-module.exports={placeOrder,getUserOrders,cancelOrder ,updateOrder,deleteOrder};
+module.exports={placeOrder,getUserOrders,cancelOrder ,updateOrder,deleteOrder,getAllOrders};
