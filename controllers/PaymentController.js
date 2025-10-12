@@ -1,57 +1,72 @@
 const Payment = require("../models/PaymentModel");
-const Delivery =require("../models/deliveryModel");
+const Delivery = require("../models/deliveryModel");
 
-//  Get payments
+// 🧾 Get payments
 const getPayments = async (req, res) => {
   try {
     let payments;
+
     if (req.user.role === "admin") {
       payments = await Payment.find().populate("user", "username email");
     } else {
       payments = await Payment.find({ user: req.user._id });
     }
+
     res.json(payments);
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Get Payments Error:", err);
+    res.status(500).json({ message: "Server error while fetching payments" });
   }
 };
 
+//  Add a new payment
 const addPayment = async (req, res) => {
   try {
-    const { cardName, cardNumber, expiry, amount, delivery } = req.body; // 💰 include amount
+    const { cardName, cardNumber, expiry, amount, delivery } = req.body;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
     }
 
-    // Save/update delivery first
+    //  Handle delivery details safely
     let userDelivery = await Delivery.findOne({ user: req.user._id });
-    if (userDelivery) {
-      Object.assign(userDelivery, delivery);
-      await userDelivery.save();
-    } else {
-      userDelivery = await Delivery.create({ user: req.user._id, ...delivery });
+
+    if (delivery && typeof delivery === "object") {
+      if (userDelivery) {
+        Object.assign(userDelivery, delivery);
+        await userDelivery.save();
+      } else {
+        userDelivery = await Delivery.create({ user: req.user._id, ...delivery });
+      }
+    } else if (!userDelivery) {
+      // Create empty delivery if none exists at all
+      userDelivery = await Delivery.create({
+        user: req.user._id,
+        fullName: "",
+        address: "",
+        city: "",
+        postalCode: "",
+        phone: "",
+      });
     }
 
-    // Create payment and link delivery
+    // 💰 Create payment linked to delivery
     const newPayment = await Payment.create({
       user: req.user._id,
       cardName,
       cardNumber,
       expiry,
-      amount, // 💰 store amount
+      amount,
       status: "pending",
       delivery: userDelivery._id,
     });
 
     res.status(201).json(newPayment);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Add Payment Error:", err);
+    res.status(500).json({ message: "Server error while adding payment" });
   }
 };
-
-
 
 //  Mark payment as paid (admin)
 const markAsPaid = async (req, res) => {
@@ -68,11 +83,12 @@ const markAsPaid = async (req, res) => {
 
     res.json({ message: "Payment marked as paid", payment });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Mark Paid Error:", err);
+    res.status(500).json({ message: "Server error while marking payment as paid" });
   }
 };
 
-//  Cancel payment 
+//  Cancel payment (user)
 const cancelPayment = async (req, res) => {
   try {
     const payment = await Payment.findOne({
@@ -93,11 +109,12 @@ const cancelPayment = async (req, res) => {
 
     res.json({ message: "Payment cancelled successfully", payment });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Cancel Payment Error:", err);
+    res.status(500).json({ message: "Server error while cancelling payment" });
   }
 };
 
-// Delete payment 
+// 🗑️ Delete payment (admin)
 const deletePayment = async (req, res) => {
   try {
     if (req.user.role !== "admin") {
@@ -110,10 +127,12 @@ const deletePayment = async (req, res) => {
     await payment.deleteOne();
     res.json({ message: "Payment deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Delete Payment Error:", err);
+    res.status(500).json({ message: "Server error while deleting payment" });
   }
 };
 
+// 📦 Save or update delivery details
 const saveDeliveryDetails = async (req, res) => {
   try {
     const { fullName, address, city, postalCode, phone } = req.body;
@@ -121,7 +140,6 @@ const saveDeliveryDetails = async (req, res) => {
     let delivery = await Delivery.findOne({ user: req.user._id });
 
     if (delivery) {
-      // Update existing delivery
       delivery.fullName = fullName;
       delivery.address = address;
       delivery.city = city;
@@ -129,7 +147,6 @@ const saveDeliveryDetails = async (req, res) => {
       delivery.phone = phone;
       await delivery.save();
     } else {
-      // Create new delivery record
       delivery = await Delivery.create({
         user: req.user._id,
         fullName,
@@ -142,19 +159,23 @@ const saveDeliveryDetails = async (req, res) => {
 
     res.json({ message: "Delivery details saved successfully", delivery });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Save Delivery Error:", err);
+    res.status(500).json({ message: "Server error while saving delivery" });
   }
 };
 
-// ✅ Get delivery details for logged-in user
+// 🚚 Get delivery details for logged-in user
 const getDeliveryDetails = async (req, res) => {
   try {
     const delivery = await Delivery.findOne({ user: req.user._id });
-    if (!delivery) return res.status(404).json({ message: "No delivery details found" });
+    if (!delivery)
+      return res.status(404).json({ message: "No delivery details found" });
+
     res.json(delivery);
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Get Delivery Error:", err);
+    res.status(500).json({ message: "Server error while fetching delivery details" });
   }
 };
-module.exports = {getPayments,addPayment,markAsPaid,cancelPayment,deletePayment,saveDeliveryDetails,getDeliveryDetails};
+
+module.exports = {getPayments,addPayment,markAsPaid,cancelPayment,deletePayment,saveDeliveryDetails,getDeliveryDetails,};
