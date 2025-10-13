@@ -1,74 +1,59 @@
 const Payment = require("../models/PaymentModel");
-const Delivery = require("../models/deliveryModel");
+const Delivery =require("../models/deliveryModel");
 
-// 🧾 Get payments
+//  Get payments
 const getPayments = async (req, res) => {
   try {
     let payments;
-
     if (req.user.role === "admin") {
       payments = await Payment.find().populate("user", "username email");
     } else {
       payments = await Payment.find({ user: req.user._id });
     }
-
     res.json(payments);
   } catch (err) {
-    console.error("Get Payments Error:", err);
-    res.status(500).json({ message: "Server error while fetching payments" });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// 💳 Add a new payment
 const addPayment = async (req, res) => {
   try {
-    const { cardName, cardNumber, expiry, amount, delivery } = req.body;
+    const { cardName, cardNumber, expiry, amount, delivery } = req.body; // 💰 include amount
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
     }
 
-    // 🏠 Handle delivery details safely
+    // Save/update delivery first
     let userDelivery = await Delivery.findOne({ user: req.user._id });
-
-    if (delivery && typeof delivery === "object") {
-      if (userDelivery) {
-        Object.assign(userDelivery, delivery);
-        await userDelivery.save();
-      } else {
-        userDelivery = await Delivery.create({ user: req.user._id, ...delivery });
-      }
-    } else if (!userDelivery) {
-      // Create empty delivery if none exists at all
-      userDelivery = await Delivery.create({
-        user: req.user._id,
-        fullName: "",
-        address: "",
-        city: "",
-        postalCode: "",
-        phone: "",
-      });
+    if (userDelivery) {
+      Object.assign(userDelivery, delivery);
+      await userDelivery.save();
+    } else {
+      userDelivery = await Delivery.create({ user: req.user._id, ...delivery });
     }
 
-    // 💰 Create payment linked to delivery
+    // Create payment and link delivery
     const newPayment = await Payment.create({
       user: req.user._id,
       cardName,
       cardNumber,
       expiry,
-      amount,
+      amount, // 💰 store amount
       status: "pending",
       delivery: userDelivery._id,
     });
 
     res.status(201).json(newPayment);
   } catch (err) {
-    console.error("Add Payment Error:", err);
-    res.status(500).json({ message: "Server error while adding payment" });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// 🟢 Mark payment as paid (admin)
+
+
+//  Mark payment as paid (admin)
 const markAsPaid = async (req, res) => {
   try {
     if (req.user.role !== "admin") {
@@ -83,12 +68,11 @@ const markAsPaid = async (req, res) => {
 
     res.json({ message: "Payment marked as paid", payment });
   } catch (err) {
-    console.error("Mark Paid Error:", err);
-    res.status(500).json({ message: "Server error while marking payment as paid" });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// 🔴 Cancel payment (user)
+//  Cancel payment 
 const cancelPayment = async (req, res) => {
   try {
     const payment = await Payment.findOne({
@@ -109,12 +93,11 @@ const cancelPayment = async (req, res) => {
 
     res.json({ message: "Payment cancelled successfully", payment });
   } catch (err) {
-    console.error("Cancel Payment Error:", err);
-    res.status(500).json({ message: "Server error while cancelling payment" });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// 🗑️ Delete payment (admin)
+// Delete payment 
 const deletePayment = async (req, res) => {
   try {
     if (req.user.role !== "admin") {
@@ -127,12 +110,10 @@ const deletePayment = async (req, res) => {
     await payment.deleteOne();
     res.json({ message: "Payment deleted successfully" });
   } catch (err) {
-    console.error("Delete Payment Error:", err);
-    res.status(500).json({ message: "Server error while deleting payment" });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// 📦 Save or update delivery details
 const saveDeliveryDetails = async (req, res) => {
   try {
     const { fullName, address, city, postalCode, phone } = req.body;
@@ -140,6 +121,7 @@ const saveDeliveryDetails = async (req, res) => {
     let delivery = await Delivery.findOne({ user: req.user._id });
 
     if (delivery) {
+      // Update existing delivery
       delivery.fullName = fullName;
       delivery.address = address;
       delivery.city = city;
@@ -147,6 +129,7 @@ const saveDeliveryDetails = async (req, res) => {
       delivery.phone = phone;
       await delivery.save();
     } else {
+      // Create new delivery record
       delivery = await Delivery.create({
         user: req.user._id,
         fullName,
@@ -159,31 +142,19 @@ const saveDeliveryDetails = async (req, res) => {
 
     res.json({ message: "Delivery details saved successfully", delivery });
   } catch (err) {
-    console.error("Save Delivery Error:", err);
-    res.status(500).json({ message: "Server error while saving delivery" });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// 🚚 Get delivery details for logged-in user
+// ✅ Get delivery details for logged-in user
 const getDeliveryDetails = async (req, res) => {
   try {
     const delivery = await Delivery.findOne({ user: req.user._id });
-    if (!delivery)
-      return res.status(404).json({ message: "No delivery details found" });
-
+    if (!delivery) return res.status(404).json({ message: "No delivery details found" });
     res.json(delivery);
   } catch (err) {
-    console.error("Get Delivery Error:", err);
-    res.status(500).json({ message: "Server error while fetching delivery details" });
+    res.status(500).json({ message: "Server error" });
   }
 };
-
-module.exports = {
-  getPayments,
-  addPayment,
-  markAsPaid,
-  cancelPayment,
-  deletePayment,
-  saveDeliveryDetails,
-  getDeliveryDetails,
-};
+module.exports = {getPayments,addPayment,markAsPaid,cancelPayment,deletePayment,saveDeliveryDetails,getDeliveryDetails};
