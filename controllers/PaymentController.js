@@ -37,7 +37,6 @@ const addPayment = async (req, res) => {
     if (!amount || amount <= 0)
       return res.status(400).json({ message: "Invalid amount" });
 
-    // Optional: link existing delivery
     const delivery = await Delivery.findOne({ user: req.user._id });
 
     const newPayment = await Payment.create({
@@ -101,6 +100,26 @@ const deletePayment = async (req, res) => {
   }
 };
 
+// MARK payment as PAID (admin only)
+const markAsPaid = async (req, res) => {
+  try {
+    if (!ensureUser(req, res)) return;
+    if (req.user.role !== "admin")
+      return res.status(403).json({ message: "Admins only" });
+
+    const payment = await Payment.findById(req.params.id);
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+
+    payment.status = "paid";
+    await payment.save();
+
+    res.json({ message: "Payment marked as paid", payment });
+  } catch (err) {
+    console.error("markAsPaid Error:", err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 // SAVE or UPDATE delivery details
 const saveDeliveryDetails = async (req, res) => {
   try {
@@ -137,22 +156,20 @@ const getDeliveryDetails = async (req, res) => {
     if (!ensureUser(req, res)) return;
 
     const delivery = await Delivery.findOne({ user: req.user._id });
-
-    // Always return 200, but null if not exists
-    if (!delivery) return res.json(null);
-
-    res.json(delivery);
+    res.json(delivery || null);
   } catch (err) {
     console.error("getDeliveryDetails Error:", err.message);
     res.status(500).json({ message: "Server error" });
   }
 };
 
+// Export all functions
 module.exports = {
   getPayments,
   addPayment,
   cancelPayment,
   deletePayment,
+  markAsPaid,
   saveDeliveryDetails,
   getDeliveryDetails,
 };
